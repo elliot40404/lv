@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>LV | Log Visualizer</title>
+        <style>
+            :root {
+                --bg: #1b1d20;
+                --fg: #ffffce;
+                --neutral: #25282c;
+                --success: #00de71;
+                --error: #ff5555;
+                --accent: #434953;
+                --accent2: #99a3b4;
+                --highlight: #7a87f9;
+            }
+            body {
+                background: var(--bg);
+                color: var(--fg);
+                font-family: 'Montserrat', sans-serif;
+                font-size: 16px;
+                line-height: 1.5;
+                margin: 0;
+                padding: 0;
+            }
+            h1 {
+                font-size: 1.5rem;
+                text-align: center;
+                font-weight: 800;
+            }
+            .container {
+                max-width: 1000px;
+                margin: 0 auto;
+                padding: 1rem;
+            }
+            header {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                margin-bottom: 1rem;
+                background-color: var(--bg);
+                position: sticky;
+                top: 0;
+                left: 0;
+            }
+            .row {
+                width: 100%;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-block: 1rem;
+            }
+            label,
+            .label {
+                font-family: 'Montserrat', sans-serif;
+                color: var(--accent2);
+                font-weight: medium;
+            }
+            .status {
+                color: var(--success);
+            }
+            input[type='checkbox'] {
+                margin-left: 0.5rem;
+            }
+            .row.two {
+                justify-content: space-between;
+            }
+            .row.two input {
+                width: 70%;
+                background-color: var(--accent);
+                color: var(--highlight);
+                border: none;
+                padding: 0.7rem;
+                border-radius: 0.25rem;
+                outline: none;
+            }
+            .row.two label {
+                display: flex;
+                align-items: center;
+                padding: 0;
+            }
+            #interval {
+                width: 4rem;
+                margin-left: 0.5rem;
+            }
+            header::after {
+                content: '';
+                display: block;
+                width: 100%;
+                height: 1px;
+                background-color: var(--accent2);
+                margin-top: 1rem;
+            }
+            /* LOGS - monospace font with alternate rows */
+            .logs div {
+                font-family: 'Roboto Mono', monospace;
+                font-size: 0.9rem;
+                padding: 0.5rem;
+                border-radius: 0.25rem;
+                margin-bottom: 0.5rem;
+            }
+            .logs div:nth-child(odd) {
+                background-color: var(--neutral);
+            }
+            .logs div:nth-child(even) {
+                background-color: var(--accent);
+            }
+        </style>
+    </head>
+    <body>
+        <h1 class="logo">LOG VISUALIZER</h1>
+        <div class="container">
+            <header>
+                <div class="row one">
+                    <span class="label"
+                        >Status: <span class="status">Online</span></span
+                    >
+                    <label for="scroll">
+                        Auto Scroll
+                        <input type="checkbox" id="scroll" checked />
+                    </label>
+                    <label for="refresh">
+                        Auto Refresh
+                        <input type="checkbox" id="refresh" checked />
+                    </label>
+                </div>
+                <div class="row two">
+                    <input type="text" id="search" placeholder="Search" />
+                    <label for="interval"
+                        >Interval(ms)
+                        <input
+                            type="number"
+                            id="interval"
+                            value="1000"
+                            min="500"
+                            max="10000"
+                            step="500"
+                        />
+                    </label>
+                </div>
+            </header>
+            <div class="logs">
+                {{if eq (len .) 0}} Nothing to see here {{end}} {{range .}}
+                <div class="log">{{.}}</div>
+                {{end}}
+            </div>
+        </div>
+        <script type="module">
+            //search
+            document.getElementById('search').addEventListener('keyup', (e) => {
+                const search = e.target.value.toLowerCase();
+                const logs = document.querySelectorAll('.logs div');
+                logs.forEach((log) => {
+                    const text = log.innerText.toLowerCase();
+                    if (text.includes(search)) {
+                        log.style.display = 'block';
+                    } else {
+                        log.style.display = 'none';
+                    }
+                });
+            });
+            // auto refresh
+            document
+                .getElementById('refresh')
+                .addEventListener('change', () => {
+                    if (document.getElementById('refresh').checked) {
+                        window.location.reload();
+                    }
+                });
+            let autoRefresh;
+            if (document.getElementById('refresh').checked) {
+                autoRefresh = setInterval(() => {
+                    window.location.reload();
+                }, 1000);
+            }
+            // INTERVAL
+            const interval = document.getElementById('interval');
+            interval.addEventListener('change', () => {
+                clearInterval(autoRefresh);
+                autoRefresh = setInterval(() => {
+                    window.location.reload();
+                }, interval.value);
+            });
+            // SCROLL TO BOTTOM
+            if (document.getElementById('scroll').checked) {
+                window.scrollTo(0, document.body.scrollHeight);
+            }
+            // STATUS CHECK
+            const status = document.querySelector('.status');
+            setInterval(async () => {
+                try {
+                    const res = await fetch('/ping');
+                    if (res.ok) {
+                        status.innerText = 'Online';
+                        status.style.color = 'var(--success)';
+                    } else {
+                        status.innerText = 'Offline';
+                        status.style.color = 'var(--error)';
+                    }
+                } catch (error) {
+                    status.innerText = 'Offline';
+                    status.style.color = 'var(--error)';
+                }
+            }, 1000);
+        </script>
+    </body>
+</html>
